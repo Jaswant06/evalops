@@ -1,0 +1,19 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.idea/
+.DS_Store
+*.egg-info/
+build/
+dist/
+
+# Local results database and MLflow files when running without Docker
+*.db
+mlruns/
+mlartifacts/
+
+# Local scratch output (status files, recording database) and the downloaded RepliQA source
+.evalops/
+.cache/

@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "evalops"
+version = "0.1.0"
+description = "EvalOps: an evaluation and release pipeline for LLM applications. A candidate version is scored on a versioned dataset and cannot be promoted if it falls below the release gate."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Jaswant Singh" }]
+keywords = ["llm", "evaluation", "llm-as-judge", "mlops", "release-gate", "rag", "ollama", "mlflow"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "httpx>=0.27",
+    "numpy>=1.26",
+    "pydantic>=2.7",
+    "pyyaml>=6.0",
+    "sqlalchemy>=2.0",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "prometheus-client>=0.20",
+]
+
+[project.optional-dependencies]
+# Experiment tracking and the model registry (client only; the server runs in Docker).
+mlflow = ["mlflow-skinny>=3.0"]
+# PostgreSQL driver for the results store. SQLite works without it.
+postgres = ["psycopg[binary]>=3.2"]
+# Rebuilding the dataset from the RepliQA source files.
+data = ["pyarrow>=15", "pandas>=2.1"]
+dev = ["pytest>=8.0", "psycopg[binary]>=3.2"]
+
+[project.scripts]
+evalops = "evalops.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "postgres: needs a PostgreSQL server (set EVALOPS_TEST_DATABASE_URL)",
+    "reliability: extended reliability scenarios with real processes (scheduled CI; run with -m reliability)",
+]
+addopts = "-m 'not reliability'"
+filterwarnings = ["ignore:Using .httpx. with .starlette.testclient. is deprecated"]

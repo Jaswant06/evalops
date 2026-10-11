@@ -1,0 +1,58 @@
+{
+  "name": "policies",
+  "version": "v1",
+  "schema_version": 1,
+  "description": "Questions about company policy documents, including unanswerable ones. Built from RepliQA 'Company Policies' documents.",
+  "created": "2026-10-10",
+  "source": {
+    "dataset": "ServiceNow/repliqa",
+    "split": "repliqa_0",
+    "revision": "7ba2f15e1b95dbece63e03935c63c791a20f00e6",
+    "topic": "Company Policies",
+    "license": "CC BY 4.0",
+    "citation": "Monteiro et al., RepliQA: A Question-Answering Dataset for Benchmarking LLMs on Unseen Reference Content, NeurIPS 2024 Datasets and Benchmarks."
+  },
+  "build": {
+    "script": "scripts/build_dataset.py",
+    "seed": 2026
+  },
+  "splits": {
+    "test": {
+      "file": "test.jsonl",
+      "documents": 50,
+      "cases": 250,
+      "categories": {
+        "answerable": 210,
+        "unanswerable": 40,
+        "citation_required": 210
+      }
+    },
+    "dev": {
+      "file": "dev.jsonl",
+      "documents": 15,
+      "cases": 75,
+      "categories": {
+        "answerable": 60,
+        "unanswerable": 15,
+        "citation_required": 60
+      }
+    },
+    "smoke": {
+      "file": "smoke.jsonl",
+      "documents": 10,
+      "cases": 50,
+      "categories": {
+        "answerable": 38,
+        "unanswerable": 12,
+        "citation_required": 38
+      }
+    }
+  },
+  "files": {
+    "dev.jsonl": "e7966aabfdc6c71849e3683ce9ac9a1604c18bbfda57ee0cc16dbd8f17a734e0",
+    "documents.jsonl": "4703f789fe7a6a54ecc543fa9ee42940d9e5b9c74d4f72a18fa33a104e2d3aac",
+    "smoke.jsonl": "c15a77938b014ca96da2bb0e9ffbb38527bd92cc47561e5bcf0890dda2bd3c8b",
+    "test.jsonl": "264fa63102ecdeda508c6a493ad94522f0564b7da2067e1dd62bbbcc0aa8a8ad"
+  },
+  "dataset_hash": "a7fc1827c5e96938631012aad3991aadd4165a5bd2a828417a9f61dac32a9b02"
+}
