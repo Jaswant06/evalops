@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  # Evaluation runs are batch jobs: they push their metrics here when they finish.
+  - job_name: pushgateway
+    honor_labels: true
+    static_configs:
+      - targets: ["pushgateway:9091"]
+  - job_name: evalops-api
+    static_configs:
+      - targets: ["api:8000"]
+  - job_name: docqa
+    static_configs:
+      - targets: ["docqa:8001"]

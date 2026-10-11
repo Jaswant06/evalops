@@ -1,0 +1,11 @@
+.venv
+.git
+.evalops
+.cache
+cache
+*.db
+mlruns
+mlartifacts
+**/__pycache__
+.pytest_cache
+.idea

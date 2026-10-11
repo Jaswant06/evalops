@@ -1,0 +1,632 @@
+{
+  "uid": "evalops-release",
+  "title": "EvalOps: evaluation results (PostgreSQL)",
+  "schemaVersion": 41,
+  "version": 1,
+  "tags": [
+    "evalops"
+  ],
+  "timezone": "browser",
+  "editable": false,
+  "refresh": "",
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "description": "Evaluation results from PostgreSQL: production vs candidate on identical test cases, the gate decision, every regression, and the audit trail. Operational metrics are on the operations dashboard (Prometheus).",
+  "templating": {
+    "list": [
+      {
+        "name": "baseline",
+        "label": "Production run",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "evalops-pg"
+        },
+        "query": "SELECT r.run_id AS __value, r.app_version_label || CASE WHEN rel.run_id IS NOT NULL THEN ' (released)' ELSE '' END || ' | ' || r.dataset_ref || ' | ' || to_char(r.created_at, 'YYYY-MM-DD HH24:MI') || ' | ' || r.mode || ' (latency ' || COALESCE(r.execution->>'latency_source', '?') || ')' AS __text FROM runs r LEFT JOIN releases rel ON rel.run_id = r.run_id WHERE r.status = 'completed' ORDER BY (rel.run_id IS NOT NULL) DESC, rel.promoted_at DESC NULLS LAST, r.created_at DESC",
+        "definition": "SELECT r.run_id AS __value, r.app_version_label || CASE WHEN rel.run_id IS NOT NULL THEN ' (released)' ELSE '' END || ' | ' || r.dataset_ref || ' | ' || to_char(r.created_at, 'YYYY-MM-DD HH24:MI') || ' | ' || r.mode || ' (latency ' || COALESCE(r.execution->>'latency_source', '?') || ')' AS __text FROM runs r LEFT JOIN releases rel ON rel.run_id = r.run_id WHERE r.status = 'completed' ORDER BY (rel.run_id IS NOT NULL) DESC, rel.promoted_at DESC NULLS LAST, r.created_at DESC",
+        "refresh": 1,
+        "includeAll": false,
+        "multi": false,
+        "sort": 0
+      },
+      {
+        "name": "candidate",
+        "label": "Candidate run",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "evalops-pg"
+        },
+        "query": "SELECT r.run_id AS __value, r.app_version_label || CASE WHEN rel.run_id IS NOT NULL THEN ' (released)' ELSE '' END || ' | ' || r.dataset_ref || ' | ' || to_char(r.created_at, 'YYYY-MM-DD HH24:MI') || ' | ' || r.mode || ' (latency ' || COALESCE(r.execution->>'latency_source', '?') || ')' AS __text FROM runs r LEFT JOIN releases rel ON rel.run_id = r.run_id WHERE r.status = 'completed' ORDER BY r.created_at DESC",
+        "definition": "SELECT r.run_id AS __value, r.app_version_label || CASE WHEN rel.run_id IS NOT NULL THEN ' (released)' ELSE '' END || ' | ' || r.dataset_ref || ' | ' || to_char(r.created_at, 'YYYY-MM-DD HH24:MI') || ' | ' || r.mode || ' (latency ' || COALESCE(r.execution->>'latency_source', '?') || ')' AS __text FROM runs r LEFT JOIN releases rel ON rel.run_id = r.run_id WHERE r.status = 'completed' ORDER BY r.created_at DESC",
+        "refresh": 1,
+        "includeAll": false,
+        "multi": false,
+        "sort": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Gate decision for this pair",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "evalops-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "evalops-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT CASE decision WHEN 'pass' THEN 'PASS' WHEN 'pass_with_warnings' THEN 'PASS (review)'\n       ELSE 'BLOCKED' END AS decision\nFROM gate_decisions\nWHERE candidate_run_id = '$candidate' AND baseline_run_id = '$baseline'\nORDER BY created_at DESC LIMIT 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "PASS": {
+                  "color": "green",
+                  "index": 0
+                },
+                "PASS (review)": {
+                  "color": "yellow",
+                  "index": 1
+                },
+                "BLOCKED": {
+                  "color": "red",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "not gated"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^decision$/",
+          "values": false
+        }
+      },
+      "id": 1
+    },
+    {
+      "type": "table",
+      "title": "Release rules (latest decision for this pair)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "evalops-pg"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 18,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "evalops-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT r->>'rule_id' AS rule, r->>'category' AS category, r->>'severity' AS severity,\n       (r->>'baseline')::float AS production, (r->>'candidate')::float AS candidate,\n       (r->>'delta')::float AS change, (r->>'ci_low')::float AS ci_low, (r->>'ci_high')::float AS ci_high,\n       CASE WHEN (r->>'passed')::bool THEN 'pass' WHEN r->>'severity' = 'mandatory' THEN 'FAIL' ELSE 'warn' END AS result,\n       array_to_string(ARRAY(SELECT jsonb_array_elements_text(r->'reasons')), '; ') AS why\nFROM (SELECT rules FROM gate_decisions\n      WHERE candidate_run_id = '$candidate' AND baseline_run_id = '$baseline'\n      ORDER BY created_at DESC LIMIT 1) d, jsonb_array_elements(d.rules) r"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 3
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "result"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "pass": {
+                        "color": "green"
+                      },
+                      "FAIL": {
+                        "color": "red"
+                      },
+                      "warn": {
+                        "color": "yellow"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "id": 2
+    },
+    {
+      "type": "table",
+      "title": "Key metrics: production vs candidate",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "evalops-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 11
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "evalops-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH wanted(category, metric, label, ord) AS (VALUES ('answerable', 'answer_correctness', 'Correct answers', 0), ('answerable', 'false_abstention_rate', 'Wrongly declined', 1), ('unanswerable', 'correct_abstention_rate', 'Declined unanswerable', 2), ('citation_required', 'citation_missing_rate', 'Missing citations', 3), ('citation_required', 'citation_invalid_rate', 'Invalid citations', 4), ('citation_required', 'citation_support_rate', 'Claims supported by citations', 5), ('all', 'unsupported_claim_rate', 'Unsupported claims', 6), ('answerable', 'retrieval_recall', 'Retrieval recall', 7), ('all', 'app_failure_rate', 'Application failures', 8), ('all', 'judge_unevaluable_rate', 'Unevaluable (judge)', 9))\nSELECT w.label AS metric, w.category, b.value AS production, c.value AS candidate,\n       c.value - b.value AS change, c.n AS cases\nFROM wanted w\nLEFT JOIN run_metrics b ON b.run_id = '$baseline' AND b.category = w.category AND b.metric = w.metric\nLEFT JOIN run_metrics c ON c.run_id = '$candidate' AND c.category = w.category AND c.metric = w.metric\nORDER BY w.ord"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "production"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "candidate"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "change"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "id": 3
+    },
+    {
+      "type": "barchart",
+      "title": "Quality by category",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "evalops-pg"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 10,
+        "w": 12,
+        "h": 11
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "evalops-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH wanted(category, metric, label, ord) AS (VALUES ('answerable', 'answer_correctness', 'Correct answers', 0), ('answerable', 'false_abstention_rate', 'Wrongly declined', 1), ('unanswerable', 'correct_abstention_rate', 'Declined unanswerable', 2), ('citation_required', 'citation_missing_rate', 'Missing citations', 3), ('citation_required', 'citation_invalid_rate', 'Invalid citations', 4), ('citation_required', 'citation_support_rate', 'Claims supported by citations', 5), ('all', 'unsupported_claim_rate', 'Unsupported claims', 6), ('answerable', 'retrieval_recall', 'Retrieval recall', 7))\nSELECT w.label AS metric, b.value AS production, c.value AS candidate\nFROM wanted w\nLEFT JOIN run_metrics b ON b.run_id = '$baseline' AND b.category = w.category AND b.metric = w.metric\nLEFT JOIN run_metrics c ON c.run_id = '$candidate' AND c.category = w.category AND c.metric = w.metric\nORDER BY w.ord"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "xField": "metric",
+        "orientation": "horizontal",
+        "legend": {
+          "showLegend": true
+        },
+        "barWidth": 0.8,
+        "groupWidth": 0.75,
+        "showValue": "auto"
+      },
+      "id": 4
+    },
+    {
+      "type": "barchart",
+      "title": "Original app latency (s)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "evalops-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 8,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "evalops-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH wanted(metric, label, ord) AS (VALUES ('latency_p50_s', 'p50', 0), ('latency_p95_s', 'p95', 1), ('latency_p99_s', 'p99', 2))\nSELECT w.label AS percentile, b.value AS production, c.value AS candidate\nFROM wanted w\nLEFT JOIN run_metrics b ON b.run_id = '$baseline' AND b.category = 'all' AND b.metric = w.metric\nLEFT JOIN run_metrics c ON c.run_id = '$candidate' AND c.category = 'all' AND c.metric = w.metric\nORDER BY w.ord"
+        }
+      ],
+      "description": "Latency measured when each answer was generated. A replay run reuses this measurement and does not re-measure it; the run picker shows each run's latency source (measured in this run, recorded, or mixed).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "xField": "percentile",
+        "orientation": "vertical",
+        "legend": {
+          "showLegend": true
+        },
+        "showValue": "auto"
+      },
+      "id": 5
+    },
+    {
+      "type": "table",
+      "title": "Cases that regressed (right in production, wrong in candidate)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "evalops-pg"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 21,
+        "w": 16,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "evalops-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT c.case_id,\n       (SELECT string_agg(x, ', ') FROM jsonb_array_elements_text(c.categories) x) AS categories,\n       CASE\n         WHEN b.record->>'status' = 'ok' AND c.record->>'status' <> 'ok' THEN 'request failed: ' || (c.record->>'status')\n         WHEN (b.record->>'abstention_correct')::bool AND NOT (c.record->>'abstention_correct')::bool\n           THEN CASE WHEN (c.record->>'answerable')::bool THEN 'wrongly declined' ELSE 'answered an unanswerable question' END\n         WHEN b.record->>'verdict' = 'correct' AND c.record->>'verdict' <> 'correct' THEN 'answer now ' || (c.record->>'verdict')\n         WHEN (c.record->>'n_citations')::int = 0 AND (b.record->>'n_citations')::int > 0 THEN 'citations dropped'\n         ELSE 'claims lost citation support'\n       END AS regression,\n       left(b.record->>'answer', 120) AS production_answer,\n       left(c.record->>'answer', 120) AS candidate_answer\nFROM case_results c\nJOIN case_results b ON b.case_id = c.case_id AND b.run_id = '$baseline'\nWHERE c.run_id = '$candidate' AND (\n     (b.record->>'status' = 'ok' AND c.record->>'status' <> 'ok')\n  OR ((b.record->>'abstention_correct')::bool AND NOT (c.record->>'abstention_correct')::bool)\n  OR (b.record->>'verdict' = 'correct' AND c.record->>'verdict' <> 'correct')\n  OR ((c.record->>'n_citations')::int = 0 AND (b.record->>'n_citations')::int > 0 AND (c.record->>'answered')::bool)\n  OR (COALESCE((c.record->>'claims_supported_cited')::int, 0) < COALESCE((c.record->>'claims_total')::int, 0)\n      AND COALESCE((b.record->>'claims_supported_cited')::int, 0) = COALESCE((b.record->>'claims_total')::int, 0)\n      AND (b.record->>'claims_total') IS NOT NULL))\nORDER BY c.case_id"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "id": 6
+    },
+    {
+      "type": "table",
+      "title": "All app versions (latest completed run on the test split)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "evalops-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 30,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "evalops-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH latest AS (\n  SELECT DISTINCT ON (app_version_label) run_id, app_version_label\n  FROM runs WHERE status = 'completed' AND dataset_ref = 'policies/v1:test'\n  ORDER BY app_version_label, created_at DESC)\nSELECT l.app_version_label AS version,\n  max(m.value) FILTER (WHERE m.category = 'answerable' AND m.metric = 'answer_correctness') AS correctness,\n  max(m.value) FILTER (WHERE m.category = 'unanswerable' AND m.metric = 'correct_abstention_rate') AS declines_unanswerable,\n  max(m.value) FILTER (WHERE m.category = 'citation_required' AND m.metric = 'citation_support_rate') AS citation_support,\n  max(m.value) FILTER (WHERE m.category = 'all' AND m.metric = 'unsupported_claim_rate') AS unsupported_claims,\n  max(m.value) FILTER (WHERE m.category = 'all' AND m.metric = 'app_failure_rate') AS app_failures,\n  max(m.value) FILTER (WHERE m.category = 'all' AND m.metric = 'latency_p95_s') AS p95_latency_s,\n  max(m.value) FILTER (WHERE m.category = 'all' AND m.metric = 'est_cost_per_1k_requests_usd') AS est_cost_per_1k_usd\nFROM latest l JOIN run_metrics m ON m.run_id = l.run_id\nGROUP BY l.app_version_label ORDER BY l.app_version_label"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "correctness"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "declines_unanswerable"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "citation_support"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unsupported_claims"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "app_failures"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "id": 7
+    },
+    {
+      "type": "table",
+      "title": "Promotions, refusals and rollbacks (audit log)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "evalops-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 46,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "evalops-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT created_at AS time, event, app || ' ' || COALESCE(version, '') AS version, decision_id, actor,\n       COALESCE(details->>'from_version', '') ||\n       COALESCE((SELECT string_agg(p, '; ') FROM jsonb_array_elements_text(details->'problems') p), '') AS details\nFROM audit_events WHERE event <> 'gate_decision'\nORDER BY created_at DESC LIMIT 25"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "id": 8
+    },
+    {
+      "type": "table",
+      "title": "Gate decisions",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "evalops-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 38,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "evalops-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT d.created_at AS time,\n       CASE d.decision WHEN 'pass' THEN 'PASS' WHEN 'pass_with_warnings' THEN 'PASS (review)' ELSE 'BLOCKED' END AS decision,\n       c.app_version_label AS candidate, COALESCE(b.app_version_label, '(first release)') AS production,\n       d.mandatory_failures AS blocking_rules, d.advisory_failures AS review_rules, d.context\nFROM gate_decisions d\nJOIN runs c ON c.run_id = d.candidate_run_id\nLEFT JOIN runs b ON b.run_id = d.baseline_run_id\nORDER BY d.created_at DESC LIMIT 25"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "decision"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "PASS": {
+                        "color": "green",
+                        "index": 0
+                      },
+                      "PASS (review)": {
+                        "color": "yellow",
+                        "index": 1
+                      },
+                      "BLOCKED": {
+                        "color": "red",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "id": 9
+    }
+  ]
+}

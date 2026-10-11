@@ -1,0 +1,3 @@
+# The official MLflow server image plus the PostgreSQL driver for its backend store.
+FROM ghcr.io/mlflow/mlflow:v3.17.0
+RUN pip install --no-cache-dir psycopg2-binary==2.9.10

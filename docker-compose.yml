@@ -1,0 +1,91 @@
+# The EvalOps stack. Ollama runs on the host (it needs the GPU); the containers
+# reach it at host.docker.internal. Evaluations usually run on the host with the
+# CLI and write here; see .env.example.
+name: evalops
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: evalops
+      POSTGRES_PASSWORD: evalops
+      POSTGRES_DB: evalops
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evalops -d evalops"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mlflow:
+    build: infra/mlflow
+    command: >-
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri postgresql+psycopg2://evalops:evalops@postgres:5432/mlflow
+      --artifacts-destination /mlartifacts
+      --allowed-hosts localhost:5001,127.0.0.1:5001,mlflow:5000,localhost,127.0.0.1,mlflow
+    ports: ["5001:5000"]   # 5000 is taken by AirPlay on macOS
+    volumes: [mlartifacts:/mlartifacts]
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  pushgateway:
+    image: prom/pushgateway:v1.11.1
+    ports: ["9091:9091"]
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    ports: ["9090:9090"]
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    ports: ["3001:3000"]   # 3000 is often taken by other local tools
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/release-comparison.json
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  api:
+    build: .
+    command: evalops serve --host 0.0.0.0 --port 8000
+    environment:
+      EVALOPS_DATABASE_URL: postgresql+psycopg://evalops:evalops@postgres:5432/evalops
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      EVALOPS_PUSHGATEWAY_URL: pushgateway:9091
+      OLLAMA_HOST: http://host.docker.internal:11434
+    ports: ["8000:8000"]
+    volumes:
+      - ./configs:/app/configs:ro
+      - ./prompts:/app/prompts:ro
+      - ./datasets:/app/datasets:ro
+      - ./cache:/app/cache
+      - ./.evalops:/app/.evalops
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  docqa:
+    build: .
+    command: uvicorn docqa.service:app --host 0.0.0.0 --port 8001
+    environment:
+      # No DOCQA_CONFIG: the service serves the production version named in configs/release.yaml.
+      OLLAMA_HOST: http://host.docker.internal:11434
+    ports: ["8001:8001"]
+    volumes:
+      - ./configs:/app/configs:ro
+      - ./prompts:/app/prompts:ro
+      - ./datasets:/app/datasets:ro
+
+volumes:
+  pgdata:
+  mlartifacts:

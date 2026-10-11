@@ -1,0 +1,9 @@
+# Changes to what counts as "good enough to ship" need the owner's review, so a
+# pull request cannot loosen the gate, swap the judge or edit the test set to get
+# itself merged. Enable "Require review from Code Owners" for main.
+/configs/gate.yaml      @Jaswant06
+/configs/scoring.yaml   @Jaswant06
+/prompts/judge/         @Jaswant06
+/datasets/              @Jaswant06
+/src/evalops/gate.py    @Jaswant06
+/src/evalops/metrics.py @Jaswant06

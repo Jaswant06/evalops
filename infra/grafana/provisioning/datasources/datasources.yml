@@ -1,0 +1,18 @@
+apiVersion: 1
+datasources:
+  - name: EvalOps results
+    uid: evalops-pg
+    type: grafana-postgresql-datasource
+    url: postgres:5432
+    user: grafana_reader
+    isDefault: true
+    jsonData:
+      database: evalops
+      sslmode: disable
+      postgresVersion: 1600
+    secureJsonData:
+      password: grafana_reader
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    url: http://prometheus:9090
