@@ -1,0 +1,82 @@
+# Release gate for DocQA. A candidate must pass every mandatory rule to replace
+# production; failed advisory rules are reported for manual review.
+#
+# Each rule applies to one category of test cases. Absolute thresholds (min/max)
+# apply to the candidate alone; max_drop / max_increase / max_increase_pct compare
+# it with production on the same cases.
+#
+# Calibrated on 2026-10-10 from the production baseline (DocQA 1.0.0 on
+# policies/v1:test), before any candidate was evaluated on the test split.
+# Baseline values are in the comments. Absolute floors sit a few points below
+# the baseline; regression limits are a few cases' worth at each category's size
+# (210 answerable cases: 1 case = 0.5 pts; 40 unanswerable: 1 case = 2.5 pts).
+version: 1
+description: DocQA release requirements
+bootstrap_samples: 2000
+confidence: 0.95
+rules:
+  # --- answerable questions -------------------------------------------------------
+  - id: answer-correctness            # baseline 84.0%
+    metric: answer_correctness
+    category: answerable
+    min: 0.80
+    max_drop: 0.03
+  - id: no-false-abstentions          # baseline 4.3%
+    metric: false_abstention_rate
+    category: answerable
+    max: 0.08
+    max_increase: 0.03
+  # --- unanswerable questions: a confident wrong answer is the main risk ------------
+  - id: declines-unanswerable         # baseline 82.5%
+    metric: correct_abstention_rate
+    category: unanswerable
+    min: 0.75
+    max_drop: 0.075                   # 3 of 40 cases
+  # --- citation-required questions ---------------------------------------------------
+  - id: citations-present             # baseline 0.0%
+    metric: citation_missing_rate
+    category: citation_required
+    max: 0.02
+  - id: citations-valid               # baseline 0.5%
+    metric: citation_invalid_rate
+    category: citation_required
+    max: 0.02
+  - id: citation-support              # baseline 99.8%
+    metric: citation_support_rate
+    category: citation_required
+    min: 0.95
+    max_drop: 0.03
+  # --- all questions ---------------------------------------------------------------------
+  - id: unsupported-claims            # baseline 0.2%
+    metric: unsupported_claim_rate
+    max: 0.03
+    max_increase: 0.02
+  - id: no-contradictions             # baseline 0.0%
+    metric: contradiction_rate
+    max: 0.02
+  - id: app-failures                  # baseline 0.0%: DocQA timeouts, errors, malformed output
+    metric: app_failure_rate
+    max: 0.01
+  - id: judge-unevaluable             # baseline 0.0%
+    description: The evaluation itself must be valid; answers the judge could not score make it incomplete.
+    metric: judge_unevaluable_rate
+    max: 0.02
+  - id: latency-p95                   # baseline 2.34 s; 4 s is the product's latency budget
+    metric: latency_p95_s
+    max: 4.0
+    max_increase_pct: 50
+  # --- advisory: reported for review, never blocking on their own ----------------------------
+  - id: answer-quality                # baseline 4.58 / 5
+    metric: answer_quality
+    category: answerable
+    severity: advisory
+    max_drop: 0.3
+  - id: retrieval-recall              # baseline 90.0%
+    metric: retrieval_recall
+    category: answerable
+    severity: advisory
+    min: 0.85
+  - id: cost                          # baseline $0.040 per 1k requests (illustrative rates)
+    metric: est_cost_per_1k_requests_usd
+    severity: advisory
+    max_increase_pct: 50

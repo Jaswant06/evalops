@@ -1,0 +1,68 @@
+# What is in production. Written only by `evalops promote` (after a passing gate decision)
+# and `evalops rollback`. CI re-checks the production entry on every pull request.
+production:
+  app: docqa
+  version: 1.2.0
+  config: configs/apps/docqa-v1.2.yaml
+  fingerprint: 62518a9678341b4bde7d0f56a49ca9d9a03e1e55e91b361f0eb4fa63a0491022
+  app_version:
+    app: docqa
+    version: 1.2.0
+    adapter: docqa.adapter:DocQAAdapter
+    components:
+      app_code: docqa 0.1.0
+      model:
+        name: qwen3.5:4b
+        digest: 3c3adf637187
+      prompt:
+        path: prompts/docqa/answer_v3.txt
+        sha256: 08ad906a74aad049939fde36b19bf571f8f984c65efd6c105ca078b248685762
+      options:
+        temperature: 0
+        seed: 7
+        num_ctx: 8192
+        num_predict: 512
+      retrieval:
+        method: bm25
+        top_k: 4
+    fingerprint: 62518a9678341b4bde7d0f56a49ca9d9a03e1e55e91b361f0eb4fa63a0491022
+  approved_run_id: docqa-v1.2.0-20261011T034836-fe55
+  decision_id: gate-20261011T034837-428622
+  promoted_at: '2026-10-11T03:48:38+00:00'
+  promoted_by: Jaswant Singh
+  via: promote
+  registry_version: '2'
+history:
+- app: docqa
+  version: 1.0.0
+  config: configs/apps/docqa-v1.0.yaml
+  fingerprint: c2b11ad8272d6876550bb159d1b17e68ddcd0152082f332fc1417332157790e3
+  app_version:
+    app: docqa
+    version: 1.0.0
+    adapter: docqa.adapter:DocQAAdapter
+    components:
+      app_code: docqa 0.1.0
+      model:
+        name: qwen3.5:4b
+        digest: 3c3adf637187
+      prompt:
+        path: prompts/docqa/answer_v1.txt
+        sha256: eeb615b454bb83a9f1a601be6ec076df5463dab50d29f1ef2df761fbe5b4567c
+      options:
+        temperature: 0
+        seed: 7
+        num_ctx: 8192
+        num_predict: 512
+      retrieval:
+        method: bm25
+        top_k: 4
+    fingerprint: c2b11ad8272d6876550bb159d1b17e68ddcd0152082f332fc1417332157790e3
+  approved_run_id: docqa-v1.0.0-20261011T034830-5204
+  decision_id: gate-20261011T034831-39f127
+  promoted_at: '2026-10-11T03:48:32+00:00'
+  promoted_by: Jaswant Singh
+  via: promote
+  registry_version: '1'
+  replaced_at: '2026-10-11T03:48:38+00:00'
+  replaced_by: 1.2.0
