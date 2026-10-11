@@ -1,0 +1,13 @@
+# EvalOps platform settings. Paths are relative to the repository root.
+dataset: policies/v1:test        # the split the release gate is decided on
+scoring: configs/scoring.yaml
+gate: configs/gate.yaml
+pricing: configs/pricing.yaml
+release: configs/release.yaml
+cache_dir: cache                 # recorded model outputs, committed so CI can replay them
+runs_dir: .evalops/runs          # per-run reports and artifacts
+execution:
+  timeout_s: 60                  # per application request
+  max_retries: 2                 # timeouts and transport errors only; bad output is not retried
+  concurrency: 1                 # sequential requests keep latency measurements clean
+  judge_concurrency: 2

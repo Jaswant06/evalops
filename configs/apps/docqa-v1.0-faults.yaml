@@ -1,0 +1,12 @@
+app: docqa
+version: "1.0.0+faults"
+description: >-
+  Failure-injection version: the production app with 5% of requests turned into
+  timeouts and 2% into truncated (malformed) output. Exercises the reliability gates.
+adapter: docqa.adapter:DocQAAdapter
+settings:
+  model: {name: "qwen3.5:4b", digest: 3c3adf637187}
+  prompt: prompts/docqa/answer_v1.txt
+  options: {temperature: 0, seed: 7, num_ctx: 8192, num_predict: 512}
+  retrieval: {method: bm25, top_k: 4}
+fault_injection: {timeout_rate: 0.05, malformed_rate: 0.02, seed: 1}

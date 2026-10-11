@@ -1,0 +1,10 @@
+app: docqa
+version: "1.0.0"
+description: >-
+  Production baseline: qwen3.5:4b, grounded prompt that requires citations, BM25 top-4 sections.
+adapter: docqa.adapter:DocQAAdapter
+settings:
+  model: {name: "qwen3.5:4b", digest: 3c3adf637187}
+  prompt: prompts/docqa/answer_v1.txt
+  options: {temperature: 0, seed: 7, num_ctx: 8192, num_predict: 512}
+  retrieval: {method: bm25, top_k: 4}

@@ -1,0 +1,15 @@
+# How answers are scored. Changing anything here changes the scoring fingerprint,
+# so runs scored differently are never compared as if they were the same.
+judge:
+  # A different model family from the qwen versions under test, so the judge is
+  # not grading its own family's answers.
+  model: {name: "gemma4:e4b", digest: 537f7e16a1bb}
+  prompts:
+    correctness: prompts/judge/correctness_v1.txt
+    claims: prompts/judge/claims_v1.txt
+  options: {temperature: 0, seed: 7, num_ctx: 8192, num_predict: 1024}
+  max_attempts: 3                # malformed judge output is retried with a new seed, then marked judge_error
+  timeout_s: 180
+checks:
+  passage_relevance_threshold: 0.5   # passage holds >= 50% of the evidence's content words
+  evidence_coverage_threshold: 0.6   # retrieved passages together hold >= 60% of them

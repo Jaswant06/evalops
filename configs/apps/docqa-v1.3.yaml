@@ -1,0 +1,10 @@
+app: docqa
+version: "1.3.0"
+description: >-
+  Bigger model: qwen3.5:9b with the production prompt. Expected to be more accurate and slower.
+adapter: docqa.adapter:DocQAAdapter
+settings:
+  model: {name: "qwen3.5:9b", digest: 2e16a80fe3d7}
+  prompt: prompts/docqa/answer_v1.txt
+  options: {temperature: 0, seed: 7, num_ctx: 8192, num_predict: 512}
+  retrieval: {method: bm25, top_k: 4}

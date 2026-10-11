@@ -1,0 +1,10 @@
+app: docqa
+version: "1.1.0"
+description: >-
+  More helpful answers: after feedback that answers felt dry, the prompt asks for a friendlier, more complete answer with practical context and next steps.
+adapter: docqa.adapter:DocQAAdapter
+settings:
+  model: {name: "qwen3.5:4b", digest: 3c3adf637187}
+  prompt: prompts/docqa/answer_v2.txt
+  options: {temperature: 0, seed: 7, num_ctx: 8192, num_predict: 512}
+  retrieval: {method: bm25, top_k: 4}

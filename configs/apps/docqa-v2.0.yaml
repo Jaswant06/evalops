@@ -1,0 +1,10 @@
+app: docqa
+version: "2.0.0"
+description: >-
+  Deliberately degraded: the production prompt on qwen3.5:0.8b, a model five times smaller.
+adapter: docqa.adapter:DocQAAdapter
+settings:
+  model: {name: "qwen3.5:0.8b", digest: 34227f3be981}
+  prompt: prompts/docqa/answer_v1.txt
+  options: {temperature: 0, seed: 7, num_ctx: 8192, num_predict: 512}
+  retrieval: {method: bm25, top_k: 4}

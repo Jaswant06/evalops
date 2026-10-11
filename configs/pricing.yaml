@@ -1,0 +1,13 @@
+# Estimated inference prices, USD per million tokens.
+# These models run locally for free. The rates below are illustrative,
+# order-of-magnitude prices for hosted open-weight models of a similar size,
+# used only to compare versions on cost. They are not quotes.
+currency: USD
+source: illustrative hosted open-weight rates by model size
+as_of: "2026-10"
+illustrative: true
+models:
+  "qwen3.5:0.8b": {input_per_mtok: 0.02, output_per_mtok: 0.06}
+  "qwen3.5:2b": {input_per_mtok: 0.04, output_per_mtok: 0.12}
+  "qwen3.5:4b": {input_per_mtok: 0.06, output_per_mtok: 0.20}
+  "qwen3.5:9b": {input_per_mtok: 0.10, output_per_mtok: 0.35}
